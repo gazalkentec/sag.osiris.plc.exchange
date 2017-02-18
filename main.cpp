@@ -29,12 +29,80 @@ DWORD WINAPI MAINDBExchangeWorker(LPVOID lpParam);
 
 CLogger<CNoLock> logger(LogLevel::Info, SERVICE_NAME);
 
+ServiceParameters SERVICE_PARAMETERS;
+
+void LoadConfig(int argc, TCHAR *argv[])
+{
+
+	TiXmlDocument config("C:/c++/sag.osiris.plc.exchange/x64/Debug/sag.osiris.plc.exchange.xml");
+
+	TCHAR szFileName[MAX_PATH], szPath[MAX_PATH];
+	GetModuleFileName(0, szFileName, MAX_PATH);
+	ExtractFilePath(szFileName, szPath);
+
+	SERVICE_PARAMETERS.ServiceName = "sjdfajsf";
+
+	//config.Parse(ParsePattern);
+
+	//if (config.Error())
+	//{
+	//	WRITELOG(logger, framework::Diagnostics::LogLevel::Error, _T("Config file is corrupt... Server is shutdown...");
+	//}
+/*
+	if (config.LoadFile())
+	{
+		/*
+		<sag.osiris.plc.exchange>
+			<log>
+				<level>0</level>
+				<file_name>sag.osiris.plc.exchange.log</file_name>
+				<file_path>.\log</file_path>
+			</log>
+		</sag.osiris.plc.exchange>
+		*/
+/*		try {
+
+			WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Config is cuccessfully loaded... try to parse..."));
+
+			TiXmlElement *root = config.FirstChildElement("sag.osiris.plc.exchange");
+
+			TiXmlElement* log = 0;
+			TiXmlElement* logFileName = 0;
+			TiXmlElement* logFilePath = 0;
+			TiXmlElement* loggingLevel = 0;
+
+			WRITELOG(logger, framework::Diagnostics::LogLevel::Info, LPWSTR(config.Value()));
+
+			return true;
+		}
+		catch(...) {
+
+			WRITELOG(logger, framework::Diagnostics::LogLevel::Error, _T("Config parse error... Server is shutdown..."));
+
+			goto EXIT;
+		}
+	}*/
+
+	SERVICE_PARAMETERS.ServiceParametersLoaded = true;
+
+}
+
 int _tmain(int argc, TCHAR *argv[])
 {
 
 	logger.AddOutputStream(new std::wofstream("c:/temp/sag.osiris.plc.exchange.log"), true);//, framework::Diagnostics::LogLevel::Info);
 
-	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server is started..."));
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server is try to start..."));
+
+	LoadConfig(argc, argv);
+
+	if (!SERVICE_PARAMETERS.ServiceParametersLoaded)
+	{
+
+		WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Config is not loaded! Server is shutdown..."));
+
+		return -1;
+	}
 
 	SERVICE_TABLE_ENTRY ServiceTable[] =
 	{
@@ -44,7 +112,7 @@ int _tmain(int argc, TCHAR *argv[])
 
 	if (StartServiceCtrlDispatcher(ServiceTable) == FALSE)
 	{
-		WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server start error! Shutdown!"));
+		WRITELOG(logger, framework::Diagnostics::LogLevel::Error, _T("Server start error! Shutdown!"));
 		return GetLastError();
 	}
 
@@ -62,7 +130,7 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 
 	if (g_StatusHandle == NULL)
 	{
-		WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server start error! Is will be stopped!"));
+		WRITELOG(logger, framework::Diagnostics::LogLevel::Error, _T("Server start error! Is will be stopped!"));
 		goto EXIT;
 	}
 
@@ -151,7 +219,7 @@ VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
 	{
 	case SERVICE_CONTROL_STOP:
 
-		WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server stop request. Is will be stopped..."));
+		WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server stop request. Service will be stopped..."));
 
 		if (g_ServiceStatus.dwCurrentState != SERVICE_RUNNING)
 			break;
