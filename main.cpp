@@ -20,9 +20,12 @@ HANDLE                g_ServiceStopEvent = INVALID_HANDLE_VALUE;
 #define SERVICE_NAME  _T("sag.osiris.plc.exchange")
 
 VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv);
+
 VOID WINAPI ServiceCtrlHandler(DWORD);
+
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
-DWORD WINAPI ServiceWorkerThread_PLCExchanger(LPVOID lpParam);
+DWORD WINAPI PLCExchangeWorker(LPVOID lpParam);
+DWORD WINAPI MAINDBExchangeWorker(LPVOID lpParam);
 
 CLogger<CNoLock> logger(LogLevel::Info, SERVICE_NAME);
 
@@ -114,27 +117,13 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 	// Start the thread that will perform the main task of the service
 	HANDLE hThread = CreateThread(NULL, 0, ServiceWorkerThread, NULL, 0, NULL);
 
-	//OutputDebugString(_T("My Sample Service: ServiceMain: Waiting for Worker Thread to complete"));
-
 	// Wait until our worker thread exits effectively signaling that the service needs to stop
 	WaitForSingleObject(hThread, INFINITE);
-
-	
-	// Start the thread that will perform the main task of the service
-	HANDLE hThread_PLCEx = CreateThread(NULL, 0, ServiceWorkerThread_PLCExchanger, NULL, 0, NULL);
-
-	//OutputDebugString(_T("My Sample Service: ServiceMain: Waiting for Worker Thread to complete"));
-
-	// Wait until our worker thread exits effectively signaling that the service needs to stop
-	WaitForSingleObject(hThread_PLCEx, INFINITE);
-
-	//OutputDebugString(_T("My Sample Service: ServiceMain: Worker Thread Stop Event signaled"));
 
 
 	/*
 	* Perform any cleanup tasks
 	*/
-	//OutputDebugString(_T("My Sample Service: ServiceMain: Performing Cleanup Operations"));
 
 	CloseHandle(g_ServiceStopEvent);
 
@@ -149,7 +138,6 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 	}
 
 EXIT:
-	//OutputDebugString(_T("My Sample Service: ServiceMain: Exit"));
 
 	return;
 }
@@ -197,33 +185,60 @@ VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
 
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 {
+
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("running..."));
+
+	// Start the thread that will perform the main task of the service
+	CreateThread(NULL, 0, MAINDBExchangeWorker, NULL, 0, NULL);
+	Sleep(300);
+	// Start the thread that will perform the main task of the service
+	CreateThread(NULL, 0, PLCExchangeWorker, NULL, 0, NULL);
+	Sleep(300);
 	//  Periodically check if the service has been requested to stop
 	while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
 	{
-		/*
-		* Perform main service function here
-		*/
+
 
 		//  Simulate some work by sleeping
-		Sleep(1000);
+		Sleep(550);
 	}
 
-	//OutputDebugString(_T("My Sample Service: ServiceWorkerThread: Exit"));
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("exit..."));
 
 	return ERROR_SUCCESS;
 }
 
 
-DWORD WINAPI ServiceWorkerThread_PLCExchanger(LPVOID lpParam)
+DWORD WINAPI PLCExchangeWorker(LPVOID lpParam)
 {
+
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("running..."));
+
 	while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
 	{
 
-		WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Request PLC Data..."));
+		//  Simulate some work by sleeping
+		Sleep(200);
+	}
+
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("exit..."));
+
+	return ERROR_SUCCESS;
+}
+
+DWORD WINAPI MAINDBExchangeWorker(LPVOID lpParam)
+{
+
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("running..."));
+
+	while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
+	{
 
 		//  Simulate some work by sleeping
 		Sleep(1000);
 	}
+
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("exit..."));
 
 	return ERROR_SUCCESS;
 }
