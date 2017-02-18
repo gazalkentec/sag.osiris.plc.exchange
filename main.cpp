@@ -22,6 +22,7 @@ HANDLE                g_ServiceStopEvent = INVALID_HANDLE_VALUE;
 VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv);
 VOID WINAPI ServiceCtrlHandler(DWORD);
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
+DWORD WINAPI ServiceWorkerThread_PLCExchanger(LPVOID lpParam);
 
 CLogger<CNoLock> logger(LogLevel::Info, SERVICE_NAME);
 
@@ -45,7 +46,8 @@ int _tmain(int argc, TCHAR *argv[])
 	}
 
 	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server is stopped..."));
-	return 0;
+
+	return ERROR_SUCCESS;
 }
 
 
@@ -116,6 +118,15 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 
 	// Wait until our worker thread exits effectively signaling that the service needs to stop
 	WaitForSingleObject(hThread, INFINITE);
+
+	
+	// Start the thread that will perform the main task of the service
+	HANDLE hThread_PLCEx = CreateThread(NULL, 0, ServiceWorkerThread_PLCExchanger, NULL, 0, NULL);
+
+	//OutputDebugString(_T("My Sample Service: ServiceMain: Waiting for Worker Thread to complete"));
+
+	// Wait until our worker thread exits effectively signaling that the service needs to stop
+	WaitForSingleObject(hThread_PLCEx, INFINITE);
 
 	//OutputDebugString(_T("My Sample Service: ServiceMain: Worker Thread Stop Event signaled"));
 
@@ -198,6 +209,21 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 	}
 
 	//OutputDebugString(_T("My Sample Service: ServiceWorkerThread: Exit"));
+
+	return ERROR_SUCCESS;
+}
+
+
+DWORD WINAPI ServiceWorkerThread_PLCExchanger(LPVOID lpParam)
+{
+	while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
+	{
+
+		WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Request PLC Data..."));
+
+		//  Simulate some work by sleeping
+		Sleep(1000);
+	}
 
 	return ERROR_SUCCESS;
 }
