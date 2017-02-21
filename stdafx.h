@@ -21,7 +21,8 @@ struct LoggerParameters {
 	std::string LogName;
 	std::string LogFilePath;
 	std::string LogFileName;
-	int LogLevel;
+	const std::string LogFileExtention = ".config";
+	int LogLevel = 0;
 };
 
 struct PLCParameters {

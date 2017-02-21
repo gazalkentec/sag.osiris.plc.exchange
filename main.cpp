@@ -13,11 +13,13 @@ using namespace std;
 using namespace framework::Diagnostics;
 using namespace framework::Threading;
 
+#define  SERVICE_NAME  _T("sag.osiris.plc.exchange")
+
+ServiceParameters SERVICE_PARAMETERS;
+
 SERVICE_STATUS        g_ServiceStatus = { 0 };
 SERVICE_STATUS_HANDLE g_StatusHandle = NULL;
 HANDLE                g_ServiceStopEvent = INVALID_HANDLE_VALUE;
-
-#define SERVICE_NAME  _T("sag.osiris.plc.exchange")
 
 VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv);
 
@@ -29,16 +31,27 @@ DWORD WINAPI MAINDBExchangeWorker(LPVOID lpParam);
 
 CLogger<CNoLock> logger(LogLevel::Info, SERVICE_NAME);
 
-ServiceParameters SERVICE_PARAMETERS;
-
 void LoadConfig(int argc, TCHAR *argv[])
 {
 
-	TiXmlDocument config("C:/c++/sag.osiris.plc.exchange/x64/Debug/sag.osiris.plc.exchange.xml");
+	TCHAR szFileName[MAX_PATH];
+	TCHAR szPath[MAX_PATH];
 
-	TCHAR szFileName[MAX_PATH], szPath[MAX_PATH];
 	GetModuleFileName(0, szFileName, MAX_PATH);
 	ExtractFilePath(szFileName, szPath);
+
+	std::wstring wStr = szPath;
+
+	LoggerParameters logger_parameters;
+
+	logger_parameters.LogLevel = 0;
+	logger_parameters.LogFilePath = std::string(wStr.begin(), wStr.end());
+	logger_parameters.LogFileName = SERVICE_PARAMETERS.ServiceName + logger_parameters.LogFileExtention;
+
+	SERVICE_PARAMETERS.Logger = logger_parameters;
+
+	TiXmlDocument config("sag.osiris.plc.exchange.xml");
+
 
 	SERVICE_PARAMETERS.ServiceName = "sjdfajsf";
 
