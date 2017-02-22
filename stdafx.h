@@ -17,42 +17,7 @@
 #include "logger/Logger.h"
 #include "sqlite/sqlite3.h"
 
-struct LoggerParameters {
-	std::string LogName;
-	std::string LogFilePath;
-	std::string LogFileName;
-	const std::string LogFileExtention = ".config";
-	int LogLevel = 0;
-};
-
-struct PLCParameters {
-	std::string PLCType;
-	int PLCPortNumber;
-	std::string PLCIPAddress;
-	int PLCPollPeriodMSec;
-};
-
-struct LocalDBParameters {
-	std::string LocalDBPath;
-	std::string TrendsDBFileName;
-	std::string MessagesDBFileName;
-	std::string DictionariesDBFileName;
-	std::string SecretsDBFileName;
-};
-
-struct MainDBParameters {
-	std::string MainDBConnectionString;
-	int MainDBPollPeriodMSec;
-};
-
-struct ServiceParameters {
-	bool ServiceParametersLoaded;
-	std::string ServiceName;
-	std::vector<LoggerParameters> Logger;
-	std::vector<PLCParameters> PLC;
-	std::vector<LocalDBParameters> LocalDB;
-	std::vector<MainDBParameters> MainDB;
-};
+#include "ServiceConfig.h"
 
 inline LPTSTR ExtractFilePath(LPCTSTR FileName, LPTSTR buf)
 {

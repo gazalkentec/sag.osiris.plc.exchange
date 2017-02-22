@@ -16,6 +16,7 @@ using namespace framework::Threading;
 #define  SERVICE_NAME  _T("sag.osiris.plc.exchange")
 
 ServiceParameters SERVICE_PARAMETERS;
+ServiceConfig sp;
 
 SERVICE_STATUS			g_ServiceStatus = { 0 };
 SERVICE_STATUS_HANDLE	g_StatusHandle = NULL;
@@ -29,12 +30,10 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
 DWORD WINAPI PLCExchangeWorker(LPVOID lpParam);
 DWORD WINAPI MAINDBExchangeWorker(LPVOID lpParam);
 
-CLogger<CNoLock> logger(LogLevel::Info, SERVICE_NAME);
+CLogger<CNoLock> logger(LogLevel::Info, LPWSTR(sp.GetServiceNameC()));
 
-void LoadConfig(int argc, TCHAR *argv[])
+void LoadConfig(int argc, TCHAR *argv[], TCHAR *env[])
 {
-
-
 
 	TCHAR szFileName[MAX_PATH];
 	TCHAR szPath[MAX_PATH];
@@ -42,11 +41,17 @@ void LoadConfig(int argc, TCHAR *argv[])
 	GetModuleFileName(0, szFileName, MAX_PATH);
 	ExtractFilePath(szFileName, szPath);
 
-	std::wstring wStrTamburine = szPath;
+	std::wstring buff = szPath;
 
-	SERVICE_PARAMETERS.Logger[0].LogLevel = 0;
-	SERVICE_PARAMETERS.Logger[0].LogFilePath = std::string(wStrTamburine.begin(), wStrTamburine.end());
-	SERVICE_PARAMETERS.Logger[0].LogFileName = "trololo" + SERVICE_PARAMETERS.Logger[0].LogFileName;
+	SERVICE_PARAMETERS.Logger.LogLevel = 0;
+	SERVICE_PARAMETERS.Logger.LogFilePath = std::string(buff.begin(), buff.end());;
+	SERVICE_PARAMETERS.Logger.LogFileName = "trololo" + SERVICE_PARAMETERS.Logger.LogFileExtention;
+
+	if (sp.IsLoaded())
+	{
+		sp.GetServiceNameC();
+	}
+	
 
 	TiXmlDocument config("sag.osiris.plc.exchange.xml");
 
@@ -98,7 +103,7 @@ void LoadConfig(int argc, TCHAR *argv[])
 
 }
 
-int _tmain(int argc, TCHAR *argv[])
+int _tmain(int argc, TCHAR *argv[], TCHAR *env[])
 {
 
 	//for (int i = 0; i < 10; i++)
@@ -107,14 +112,50 @@ int _tmain(int argc, TCHAR *argv[])
 
 	//	Sleep(1000);
 	//}
+
+	std::cout << "Parameters count: " << argc << std::endl;
+
+	std::cout << "Parameters: " << std::endl;
+
+	for (int i = 0; argv[i]; i++)
+	{
+
+		std::wstring buff = argv[i];
+
+		std::cout << std::string(buff.begin(), buff.end()) << std::endl;
+
+	}
+
+	std::cout << "Environment: " << std::endl;
+
+	for (int i = 0; env[i]; i++)
+	{
+
+		std::wstring buff = env[i];
+
+		std::cout << std::string(buff.begin(), buff.end()) << std::endl;
+
+		//std::cout << char(*env[i]);
+		//
+		//for (; *env[i]++; )
+		//{
+		//	std::cout << char(*env[i]);
+		//}
+
+		//std::cout << std::endl;
+	}
 	
+	//system("PAUSE >> VOID");
+
+	//return(EXIT_SUCCESS);
+
 	logger.AddOutputStream(new std::wofstream("c:/temp/sag.osiris.plc.exchange.log"), true);//, framework::Diagnostics::LogLevel::Info);
 
 	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server is try to start..."));
 
-	LoadConfig(argc, argv);
+	LoadConfig(argc, argv, env);
 
-	if (!SERVICE_PARAMETERS.ServiceParametersLoaded)
+	if (!sp.IsLoaded())
 	{
 
 		WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Config is not loaded! Server is shutdown..."));
@@ -124,7 +165,7 @@ int _tmain(int argc, TCHAR *argv[])
 
 	SERVICE_TABLE_ENTRY ServiceTable[] =
 	{
-		{ SERVICE_NAME, (LPSERVICE_MAIN_FUNCTION)ServiceMain },
+		{ LPWSTR(sp.GetServiceNameC()) , (LPSERVICE_MAIN_FUNCTION)ServiceMain },
 		{ NULL, NULL }
 	};
 
@@ -144,7 +185,7 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 {
 	DWORD Status = E_FAIL;
 
-	g_StatusHandle = RegisterServiceCtrlHandler(SERVICE_NAME, ServiceCtrlHandler);
+	g_StatusHandle = RegisterServiceCtrlHandler(LPWSTR(sp.GetServiceNameC()), ServiceCtrlHandler);
 
 	if (g_StatusHandle == NULL)
 	{
