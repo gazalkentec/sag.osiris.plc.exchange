@@ -17,9 +17,9 @@ using namespace framework::Threading;
 
 ServiceParameters SERVICE_PARAMETERS;
 
-SERVICE_STATUS        g_ServiceStatus = { 0 };
-SERVICE_STATUS_HANDLE g_StatusHandle = NULL;
-HANDLE                g_ServiceStopEvent = INVALID_HANDLE_VALUE;
+SERVICE_STATUS			g_ServiceStatus = { 0 };
+SERVICE_STATUS_HANDLE	g_StatusHandle = NULL;
+HANDLE					g_ServiceStopEvent = INVALID_HANDLE_VALUE;
 
 VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv);
 
@@ -34,21 +34,19 @@ CLogger<CNoLock> logger(LogLevel::Info, SERVICE_NAME);
 void LoadConfig(int argc, TCHAR *argv[])
 {
 
+
+
 	TCHAR szFileName[MAX_PATH];
 	TCHAR szPath[MAX_PATH];
 
 	GetModuleFileName(0, szFileName, MAX_PATH);
 	ExtractFilePath(szFileName, szPath);
 
-	std::wstring wStr = szPath;
+	std::wstring wStrTamburine = szPath;
 
-	LoggerParameters logger_parameters;
-
-	logger_parameters.LogLevel = 0;
-	logger_parameters.LogFilePath = std::string(wStr.begin(), wStr.end());
-	logger_parameters.LogFileName = SERVICE_PARAMETERS.ServiceName + logger_parameters.LogFileExtention;
-
-	SERVICE_PARAMETERS.Logger = logger_parameters;
+	SERVICE_PARAMETERS.Logger[0].LogLevel = 0;
+	SERVICE_PARAMETERS.Logger[0].LogFilePath = std::string(wStrTamburine.begin(), wStrTamburine.end());
+	SERVICE_PARAMETERS.Logger[0].LogFileName = "trololo" + SERVICE_PARAMETERS.Logger[0].LogFileName;
 
 	TiXmlDocument config("sag.osiris.plc.exchange.xml");
 
@@ -103,6 +101,13 @@ void LoadConfig(int argc, TCHAR *argv[])
 int _tmain(int argc, TCHAR *argv[])
 {
 
+	//for (int i = 0; i < 10; i++)
+	//{
+	//	std::cout << "\a" << std::endl;
+
+	//	Sleep(1000);
+	//}
+	
 	logger.AddOutputStream(new std::wofstream("c:/temp/sag.osiris.plc.exchange.log"), true);//, framework::Diagnostics::LogLevel::Info);
 
 	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server is try to start..."));
