@@ -8,6 +8,7 @@
 #include <tchar.h>
 
 #include "stdafx.h"
+#include "configurator.h"
 
 using namespace std;
 using namespace framework::Diagnostics;
@@ -15,8 +16,7 @@ using namespace framework::Threading;
 
 #define  SERVICE_NAME  _T("sag.osiris.plc.exchange")
 
-ServiceParameters SERVICE_PARAMETERS;
-ServiceConfig sp;
+Configurator cnf;
 
 SERVICE_STATUS			g_ServiceStatus = { 0 };
 SERVICE_STATUS_HANDLE	g_StatusHandle = NULL;
@@ -30,78 +30,8 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
 DWORD WINAPI PLCExchangeWorker(LPVOID lpParam);
 DWORD WINAPI MAINDBExchangeWorker(LPVOID lpParam);
 
-CLogger<CNoLock> logger(LogLevel::Info, LPWSTR(sp.GetServiceNameC()));
+CLogger<CNoLock> logger(LogLevel::Info, LPWSTR(cnf.GetServiceNameC()));
 
-void LoadConfig(int argc, TCHAR *argv[], TCHAR *env[])
-{
-
-	TCHAR szFileName[MAX_PATH];
-	TCHAR szPath[MAX_PATH];
-
-	GetModuleFileName(0, szFileName, MAX_PATH);
-	ExtractFilePath(szFileName, szPath);
-
-	std::wstring buff = szPath;
-
-	SERVICE_PARAMETERS.Logger.LogLevel = 0;
-	SERVICE_PARAMETERS.Logger.LogFilePath = std::string(buff.begin(), buff.end());;
-	SERVICE_PARAMETERS.Logger.LogFileName = "trololo" + SERVICE_PARAMETERS.Logger.LogFileExtention;
-
-	if (sp.IsLoaded())
-	{
-		sp.GetServiceNameC();
-	}
-	
-
-	TiXmlDocument config("sag.osiris.plc.exchange.xml");
-
-
-	SERVICE_PARAMETERS.ServiceName = "sjdfajsf";
-
-	//config.Parse(ParsePattern);
-
-	//if (config.Error())
-	//{
-	//	WRITELOG(logger, framework::Diagnostics::LogLevel::Error, _T("Config file is corrupt... Server is shutdown...");
-	//}
-/*
-	if (config.LoadFile())
-	{
-		/*
-		<sag.osiris.plc.exchange>
-			<log>
-				<level>0</level>
-				<file_name>sag.osiris.plc.exchange.log</file_name>
-				<file_path>.\log</file_path>
-			</log>
-		</sag.osiris.plc.exchange>
-		*/
-/*		try {
-
-			WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Config is cuccessfully loaded... try to parse..."));
-
-			TiXmlElement *root = config.FirstChildElement("sag.osiris.plc.exchange");
-
-			TiXmlElement* log = 0;
-			TiXmlElement* logFileName = 0;
-			TiXmlElement* logFilePath = 0;
-			TiXmlElement* loggingLevel = 0;
-
-			WRITELOG(logger, framework::Diagnostics::LogLevel::Info, LPWSTR(config.Value()));
-
-			return true;
-		}
-		catch(...) {
-
-			WRITELOG(logger, framework::Diagnostics::LogLevel::Error, _T("Config parse error... Server is shutdown..."));
-
-			goto EXIT;
-		}
-	}*/
-
-	SERVICE_PARAMETERS.ServiceParametersLoaded = true;
-
-}
 
 int _tmain(int argc, TCHAR *argv[], TCHAR *env[])
 {
@@ -153,9 +83,9 @@ int _tmain(int argc, TCHAR *argv[], TCHAR *env[])
 
 	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server is try to start..."));
 
-	LoadConfig(argc, argv, env);
+	cnf.LoadConfig(argc, argv, env);
 
-	if (!sp.IsLoaded())
+	if (!cnf.IsLoaded())
 	{
 
 		WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Config is not loaded! Server is shutdown..."));
@@ -165,7 +95,7 @@ int _tmain(int argc, TCHAR *argv[], TCHAR *env[])
 
 	SERVICE_TABLE_ENTRY ServiceTable[] =
 	{
-		{ LPWSTR(sp.GetServiceNameC()) , (LPSERVICE_MAIN_FUNCTION)ServiceMain },
+		{ LPWSTR(cnf.GetServiceNameC()) , (LPSERVICE_MAIN_FUNCTION)ServiceMain },
 		{ NULL, NULL }
 	};
 
@@ -185,7 +115,7 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 {
 	DWORD Status = E_FAIL;
 
-	g_StatusHandle = RegisterServiceCtrlHandler(LPWSTR(sp.GetServiceNameC()), ServiceCtrlHandler);
+	g_StatusHandle = RegisterServiceCtrlHandler(LPWSTR(cnf.GetServiceNameC()), ServiceCtrlHandler);
 
 	if (g_StatusHandle == NULL)
 	{

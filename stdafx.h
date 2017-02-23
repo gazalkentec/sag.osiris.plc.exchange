@@ -1,7 +1,6 @@
 #pragma once
 
 #pragma comment (lib, "libnodave/libnodave.lib")
-#pragma comment (lib, "tinyxml/tinyxml.lib")
 
 #include <vector>
 #include <string>
@@ -12,12 +11,8 @@
 #include <cstdlib>
 #include <fstream>
 
-#include "tinyxml/tinyxml.h"
-
 #include "logger/Logger.h"
 #include "sqlite/sqlite3.h"
-
-#include "ServiceConfig.h"
 
 inline LPTSTR ExtractFilePath(LPCTSTR FileName, LPTSTR buf)
 {
