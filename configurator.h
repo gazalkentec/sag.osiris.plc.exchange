@@ -133,6 +133,9 @@ public:
 							TiXmlElement *plc = service->FirstChildElement("plc");
 							if (plc)
 							{
+								_plc.PLCType = plc->Attribute("type");
+								_plc.PLCPollPeriodMSec = int(plc->Attribute("poll_period_msecv"));
+								_plc.PLCPortNumber = int(plc->Attribute("port"));
 
 							}
 							else
