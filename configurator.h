@@ -51,7 +51,7 @@ private:
 
 	std::string _app_path;
 	std::string _service_name;
-	std::string _config_file_name = "service.config";
+	const std::string _config_file_name = "service.config";
 
 	LoggerParameters _logger;
 	PLCParameters _plc;
@@ -77,7 +77,7 @@ public:
 		_is_loaded = false;
 	}
 
-	void LoadConfig(int argc, TCHAR *argv[], TCHAR *env[])
+	bool LoadConfig(int argc, TCHAR *argv[], TCHAR *env[])
 	{
 
 		TCHAR szFileName[MAX_PATH];
@@ -96,73 +96,74 @@ public:
 
 		if (!config.Error())
 		{
-
-			if (config.LoadFile())
+			if (config.LoadFile(TIXML_ENCODING_UTF8))
 			{
 				try
 				{
+					TiXmlElement *service = config.FirstChildElement("service");
 
-					TiXmlNode *root = config.FirstChild();
+					if (service)
+					{
+						_service_name = service->Attribute("name");
 
-					TiXmlNode *service = root->GetUserData();
+						if (!_service_name.empty())
+						{
+							_logger.LogName = _service_name;
+							_logger.LogFileName = _logger.LogName + _logger.LogFileExtention;
+							_logger.LogFilePath = _app_path;
 
-					int i = 0;
+							TiXmlElement *logger = service->FirstChildElement("log");
+							if (logger)
+							{
+								_logger.LogLevel = framework::Diagnostics::LogLevel(int(logger->Attribute("level")));
+								_logger.LogFilePath += logger->Attribute("append_logfile_path");
+								std::string buff = logger->Attribute("alter_logfile_name");
 
+								if (!buff.empty())
+								{
+									_logger.LogFileName = buff;
+								}
+							}
+							else
+							{
+								_is_loaded = false;
+								return _is_loaded;
+							}
+
+							TiXmlElement *plc = service->FirstChildElement("plc");
+							if (plc)
+							{
+
+							}
+							else
+							{
+								_is_loaded = false;
+								return _is_loaded;
+							}
+
+							//<plc poll_period_msecv = "500" ip_address = "192.168.1.100" port = "55555" / >
+							//<localdb dictionaries = ".\db\dictionaries.db" messages = ".\db\messages.db" secrets = ".\db\secrets.db" trends = ".\db\trends.db" / >
+							//<maindb user = "osiris_plc_exchange" userpass = "osiris_plc_exchange" poll_period_msec = "500" / >
+
+						}
+						else
+						{
+							_is_loaded = false;
+							return _is_loaded;
+						}
+					}
 				}
-				catch (...) {
+				catch (...)
+				{
+					_is_loaded = false;
+					return _is_loaded;
 				}
 			}
 		}
 
-		/*
-
-
-
-		_service_name = "sag.arachne.exchanger";
-		_logger.LogName = _service_name;
-		_logger.LogFileName = _logger.LogName + _logger.LogFileExtention;
-
-		_logger.LogFilePath = std::string(buff.begin(), buff.end());
-
-
-
-		////SERVICE_PARAMETERS.ServiceName = "sjdfajsf";
-
-		//if (config.LoadFile())
-		//{
-		///*
-		//<sag.osiris.plc.exchange>
-		//<log>
-		//<level>0</level>
-		//<file_name>sag.osiris.plc.exchange.log</file_name>
-		//<file_path>.\log</file_path>
-		//</log>
-		//</sag.osiris.plc.exchange>
-		//*/
-		///*		try {
 
 		//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Config is cuccessfully loaded... try to parse..."));
-
-
-		//TiXmlElement* log = 0;
-		//TiXmlElement* logFileName = 0;
-		//TiXmlElement* logFilePath = 0;
-		//TiXmlElement* loggingLevel = 0;
-
 		//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, LPWSTR(config.Value()));
-
-		//return true;
-		//}
-		//catch(...) {
-
-		//WRITELOG(logger, framework::Diagnostics::LogLevel::Error, _T("Config parse error... Server is shutdown..."));
-
-		//goto EXIT;
-		//}
-		//}*/
-
-		//SERVICE_PARAMETERS.ServiceParametersLoaded = true;
-
 	}
 
 	~Configurator()
