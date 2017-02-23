@@ -121,7 +121,7 @@ int _tmain(int argc, TCHAR *argv[], TCHAR *env[])
 	{
 
 		std::wstring buff = argv[i];
-
+		
 		std::cout << std::string(buff.begin(), buff.end()) << std::endl;
 
 	}
