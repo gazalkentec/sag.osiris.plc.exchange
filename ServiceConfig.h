@@ -52,8 +52,9 @@ private:
 
 public:
 
-	bool IsLoaded() { return _is_loaded; };
+	const bool IsLoaded() { return _is_loaded; };
 
+	const std::string GetServiceName() { return _service_name; }
 	const char* GetServiceNameC() { return _service_name.c_str(); }
 
 	LoggerParameters GetLogger() { return _logger; };
