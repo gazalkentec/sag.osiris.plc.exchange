@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atlbase.h>
+#include <atlconv.h>
 #include "stdafx.h"
 
 #include "tinyxml/tinyxml.h"
@@ -14,13 +16,14 @@ struct LoggerParameters {
 };
 
 struct PLCParameters {
-	std::string PLCType;
+	PLC_TYPES PLCType = PLC_TYPES::AUTODETECT;
 	int PLCPortNumber;
 	std::string PLCIPAddress;
 	int PLCPollPeriodMSec;
 };
 
 struct LocalDBParameters {
+	DB_TYPES LocalDBType;
 	std::string LocalDBPath;
 	std::string TrendsDBFileName;
 	std::string MessagesDBFileName;
@@ -33,23 +36,13 @@ struct MainDBParameters {
 	int MainDBPollPeriodMSec;
 };
 
-struct ServiceParameters {
-	bool ServiceParametersLoaded;
-	std::string ServiceName;
-
-	LoggerParameters Logger;
-	PLCParameters PLC;
-	LocalDBParameters LocalDB;
-	MainDBParameters MainDB;
-};
-
 class Configurator
 {
 private:
 
-	bool _is_loaded = false;
-
-	std::string _app_path;
+	std::string _path;
+	SERVICE_TYPES _service_type;
+	int _service_control_port;
 	std::string _service_name;
 	const std::string _config_file_name = "service.config";
 
@@ -58,18 +51,23 @@ private:
 	LocalDBParameters _localdb;
 	MainDBParameters _maindb;
 
+	bool _is_loaded = false;
+
 public:
 
-	const bool IsLoaded() { return _is_loaded; };
-	const std::string AppPath() { return _app_path; };
+	bool IsLoaded() { return _is_loaded; };
+	std::string ServicePath() { return _path; };
+	std::string ServiceName() { return _service_name; }
+	LPCTSTR ServiceName_LPCTSTR()
+	{
+		CA2T buff(_service_name.c_str());
+		LPCTSTR result = buff;
+		return result;
+	}
 
-	const std::string GetServiceName() { return _service_name; }
-	const char* GetServiceNameC() { return _service_name.c_str(); }
-
-	LoggerParameters GetLogger() { return _logger; };
-	PLCParameters GetPLC() { return _plc; };
-	LocalDBParameters GetLocalDB() { return _localdb; };
-	MainDBParameters GetMainDB() { return _maindb; };
+	std::string LogName() { return _logger.LogName; };
+	std::string LogFile() { return _logger.LogFilePath + _logger.LogFileName; };
+	framework::Diagnostics::LogLevel LogLevel() { return _logger.LogLevel; };
 
 
 	Configurator()
@@ -88,9 +86,9 @@ public:
 
 		std::wstring buff = szPath;
 
-		_app_path = std::string(buff.begin(), buff.end());
+		_path = std::string(buff.begin(), buff.end());
 
-		std::string configFile = _app_path + _config_file_name;
+		std::string configFile = _path + _config_file_name;
 
 		TiXmlDocument config(configFile.c_str());
 
@@ -104,66 +102,174 @@ public:
 
 					if (service)
 					{
-						_service_name = service->Attribute("name");
+						switch (static_cast<SERVICE_TYPES>(atoi(service->Attribute("type")))) {
 
-						if (!_service_name.empty())
-						{
-							_logger.LogName = _service_name;
-							_logger.LogFileName = _logger.LogName + _logger.LogFileExtention;
-							_logger.LogFilePath = _app_path;
+						case SERVICE_TYPES::ARACHNE_NODE:
+							goto EXIT;
 
-							TiXmlElement *logger = service->FirstChildElement("log");
-							if (logger)
+							break;
+						case SERVICE_TYPES::ARACHNE_PLC_CONTROL:
+
+							_service_name = service->Attribute("name");
+
+							if (!_service_name.empty())
 							{
-								_logger.LogLevel = framework::Diagnostics::LogLevel(int(logger->Attribute("level")));
-								_logger.LogFilePath += logger->Attribute("append_logfile_path");
-								std::string buff = logger->Attribute("alter_logfile_name");
+								_service_type = SERVICE_TYPES::ARACHNE_PLC_CONTROL;
+								_service_control_port = atoi(service->Attribute("command_port"));
 
-								if (!buff.empty())
+								TiXmlElement *logger = service->FirstChildElement("log");
+								if (logger)
 								{
-									_logger.LogFileName = buff;
+									_logger.LogName = _service_name;
+
+									std::string buff = logger->Attribute("alter_file_name");
+									if (!buff.empty()){
+										_logger.LogFileName = buff;
+									} else _logger.LogFileName = _logger.LogName + _logger.LogFileExtention;
+
+									buff.clear();
+									buff = logger->Attribute("alter_path");
+									if (!buff.empty()) {
+										if (buff.substr(0, 2) == ".\\") {
+											_logger.LogFilePath = _path + buff.substr(2, buff.length());
+										}
+										else _logger.LogFilePath = buff;
+									}
+									else _logger.LogFilePath = _path;
+
+									_logger.LogLevel = static_cast<framework::Diagnostics::LogLevel>(atoi(logger->Attribute("level")));
+
+									TiXmlElement *plc = service->FirstChildElement("plc");
+									if (plc)
+									{
+										_plc.PLCType = static_cast<PLC_TYPES>(atoi(plc->Attribute("type")));
+										_plc.PLCPollPeriodMSec = atoi(plc->Attribute("poll_period_msecv"));
+										_plc.PLCPortNumber = atoi(plc->Attribute("port"));
+										_plc.PLCIPAddress = plc->Attribute("ip_address");
+
+										TiXmlElement *localdb = service->FirstChildElement("localdb");
+										if (localdb)
+										{
+
+											_localdb.LocalDBType = static_cast<DB_TYPES>(atoi(localdb->Attribute("type")));
+
+											switch (static_cast<DB_TYPES>(atoi(localdb->Attribute("type")))) {
+
+											case DB_TYPES::DB_ORACLE:
+												goto EXIT;
+
+												break;
+
+											case DB_TYPES::DB_MSSQL:
+												goto EXIT;
+
+												break;
+
+											case DB_TYPES::DB_SQLITE:
+
+												buff.clear();
+												buff = localdb->Attribute("alter_path");
+												if (!buff.empty()) {
+													if (buff.substr(0, 2) == ".\\") {
+														_localdb.LocalDBPath = _path + buff.substr(2, buff.length());
+													}
+													else _localdb.LocalDBPath = buff;
+												}
+												else _localdb.LocalDBPath = _path;
+
+												_localdb.DictionariesDBFileName = _localdb.LocalDBPath + localdb->Attribute("dictionaries");
+												_localdb.MessagesDBFileName = _localdb.LocalDBPath + localdb->Attribute("messages");
+												_localdb.SecretsDBFileName = _localdb.LocalDBPath + localdb->Attribute("secrets");
+												_localdb.TrendsDBFileName = _localdb.LocalDBPath + localdb->Attribute("trends");
+
+												break;
+											default:
+												goto EXIT;
+											}
+
+											TiXmlElement *maindb = service->FirstChildElement("maindb");
+											if (maindb)
+											{
+												switch (static_cast<DB_TYPES>(atoi(maindb->Attribute("type")))) {
+
+												case DB_TYPES::DB_ORACLE:
+
+													_maindb.MainDBConnectionString = maindb->Attribute("conn_string");
+													_maindb.MainDBPollPeriodMSec = atoi(maindb->Attribute("poll_period_msec"));
+
+													break;
+
+												case DB_TYPES::DB_MSSQL:
+													goto EXIT;
+
+													break;
+
+												case DB_TYPES::DB_SQLITE:
+													goto EXIT;
+
+													break;
+												default:
+													goto EXIT;
+												}
+
+												_is_loaded = true;
+												return _is_loaded;
+											}
+											else
+											{
+												goto EXIT;
+											}
+										}
+										else
+										{
+											goto EXIT;
+										}
+									}
+									else
+									{
+										goto EXIT;
+									}
+								}
+								else
+								{
+									goto EXIT;
 								}
 							}
 							else
 							{
-								_is_loaded = false;
-								return _is_loaded;
+								goto EXIT;
 							}
 
-							TiXmlElement *plc = service->FirstChildElement("plc");
-							if (plc)
-							{
-								_plc.PLCType = plc->Attribute("type");
-								_plc.PLCPollPeriodMSec = int(plc->Attribute("poll_period_msecv"));
-								_plc.PLCPortNumber = int(plc->Attribute("port"));
+							break;
+						case SERVICE_TYPES::ARACHNE_WEIGHT_CONTROL:
+							goto EXIT;
 
-							}
-							else
-							{
-								_is_loaded = false;
-								return _is_loaded;
-							}
+							break;
+						case SERVICE_TYPES::ARACHNE_TERMAL_CONTROL:
+							goto EXIT;
 
-							//<plc poll_period_msecv = "500" ip_address = "192.168.1.100" port = "55555" / >
-							//<localdb dictionaries = ".\db\dictionaries.db" messages = ".\db\messages.db" secrets = ".\db\secrets.db" trends = ".\db\trends.db" / >
-							//<maindb user = "osiris_plc_exchange" userpass = "osiris_plc_exchange" poll_period_msec = "500" / >
+							break;
+						case SERVICE_TYPES::ARACHNE_BUZZER_CONTROL:
+							goto EXIT;
 
+							break;
+						default:
+							goto EXIT;
 						}
-						else
-						{
-							_is_loaded = false;
-							return _is_loaded;
-						}
+
 					}
+					else goto EXIT;
 				}
 				catch (...)
 				{
-					_is_loaded = false;
-					return _is_loaded;
+					goto EXIT;
 				}
 			}
 		}
 
+EXIT:
+		_is_loaded = false;
+		return _is_loaded;
 
 		//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Config is cuccessfully loaded... try to parse..."));
 		//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, LPWSTR(config.Value()));

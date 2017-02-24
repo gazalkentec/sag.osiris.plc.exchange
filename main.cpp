@@ -6,6 +6,8 @@
 
 #include <Windows.h>
 #include <tchar.h>
+#include <atlbase.h>
+#include <atlconv.h>
 
 #include "stdafx.h"
 #include "configurator.h"
@@ -30,12 +32,10 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
 DWORD WINAPI PLCExchangeWorker(LPVOID lpParam);
 DWORD WINAPI MAINDBExchangeWorker(LPVOID lpParam);
 
-CLogger<CNoLock> logger(LogLevel::Info, LPWSTR(cnf.GetServiceNameC()));
-
-
 int _tmain(int argc, TCHAR *argv[], TCHAR *env[])
 {
 
+/*
 	//for (int i = 0; i < 10; i++)
 	//{
 	//	std::cout << "\a" << std::endl;
@@ -43,27 +43,27 @@ int _tmain(int argc, TCHAR *argv[], TCHAR *env[])
 	//	Sleep(1000);
 	//}
 
-	std::cout << "Parameters count: " << argc << std::endl;
+	//std::cout << "Parameters count: " << argc << std::endl;
 
-	std::cout << "Parameters: " << std::endl;
+	//std::cout << "Parameters: " << std::endl;
 
-	for (int i = 0; argv[i]; i++)
-	{
+	//for (int i = 0; argv[i]; i++)
+	//{
 
-		std::wstring buff = argv[i];
-		
-		std::cout << std::string(buff.begin(), buff.end()) << std::endl;
+	//	std::wstring buff = argv[i];
+	//	
+	//	std::cout << std::string(buff.begin(), buff.end()) << std::endl;
 
-	}
+	//}
 
-	std::cout << "Environment: " << std::endl;
+	//std::cout << "Environment: " << std::endl;
 
-	for (int i = 0; env[i]; i++)
-	{
+	//for (int i = 0; env[i]; i++)
+	//{
 
-		std::wstring buff = env[i];
+	//	std::wstring buff = env[i];
 
-		std::cout << std::string(buff.begin(), buff.end()) << std::endl;
+	//	std::cout << std::string(buff.begin(), buff.end()) << std::endl;
 
 		//std::cout << char(*env[i]);
 		//
@@ -73,29 +73,33 @@ int _tmain(int argc, TCHAR *argv[], TCHAR *env[])
 		//}
 
 		//std::cout << std::endl;
-	}
+	//}
 	
 	//system("PAUSE >> VOID");
 
-	//return(EXIT_SUCCESS);
-
-	logger.AddOutputStream(new std::wofstream("c:/temp/sag.osiris.plc.exchange.log"), true);//, framework::Diagnostics::LogLevel::Info);
-
-	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server is try to start..."));
+	//return(EXIT_SUCCESS); */
 
 	cnf.LoadConfig(argc, argv, env);
 
 	if (!cnf.IsLoaded())
 	{
-
-		WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Config is not loaded! Server is shutdown..."));
-
 		return -1;
 	}
+	
+	CA2T buff(cnf.ServiceName().c_str());
+	LPCTSTR tamburine = buff;
+
+	CLogger<CNoLock> logger(cnf.LogLevel(), tamburine);
+
+	logger.AddOutputStream(new std::wofstream(cnf.LogFile()), true, cnf.LogLevel());
+
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Config is loaded successfully. Server is try to start..."));
+
+	
 
 	SERVICE_TABLE_ENTRY ServiceTable[] =
 	{
-		{ LPWSTR(cnf.GetServiceNameC()) , (LPSERVICE_MAIN_FUNCTION)ServiceMain },
+		{ LPWSTR(cnf.ServiceName().c_str()), (LPSERVICE_MAIN_FUNCTION)ServiceMain },
 		{ NULL, NULL }
 	};
 
@@ -115,11 +119,11 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 {
 	DWORD Status = E_FAIL;
 
-	g_StatusHandle = RegisterServiceCtrlHandler(LPWSTR(cnf.GetServiceNameC()), ServiceCtrlHandler);
+	g_StatusHandle = RegisterServiceCtrlHandler(SERVICE_NAME, ServiceCtrlHandler);
 
 	if (g_StatusHandle == NULL)
 	{
-		WRITELOG(logger, framework::Diagnostics::LogLevel::Error, _T("Server start error! Is will be stopped!"));
+		//WRITELOG(logger, framework::Diagnostics::LogLevel::Error, _T("Server start error! Is will be stopped!"));
 		goto EXIT;
 	}
 
@@ -208,7 +212,7 @@ VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
 	{
 	case SERVICE_CONTROL_STOP:
 
-		WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server stop request. Service will be stopped..."));
+		//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server stop request. Service will be stopped..."));
 
 		if (g_ServiceStatus.dwCurrentState != SERVICE_RUNNING)
 			break;
@@ -243,7 +247,7 @@ VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 {
 
-	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("running..."));
+	//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("running..."));
 
 	// Start the thread that will perform the main task of the service
 	CreateThread(NULL, 0, MAINDBExchangeWorker, NULL, 0, NULL);
@@ -260,7 +264,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 		Sleep(550);
 	}
 
-	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("exit..."));
+	//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("exit..."));
 
 	return ERROR_SUCCESS;
 }
@@ -269,7 +273,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 DWORD WINAPI PLCExchangeWorker(LPVOID lpParam)
 {
 
-	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("running..."));
+	//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("running..."));
 
 	while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
 	{
@@ -278,7 +282,7 @@ DWORD WINAPI PLCExchangeWorker(LPVOID lpParam)
 		Sleep(200);
 	}
 
-	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("exit..."));
+	//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("exit..."));
 
 	return ERROR_SUCCESS;
 }
@@ -286,7 +290,7 @@ DWORD WINAPI PLCExchangeWorker(LPVOID lpParam)
 DWORD WINAPI MAINDBExchangeWorker(LPVOID lpParam)
 {
 
-	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("running..."));
+	//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("running..."));
 
 	while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
 	{
@@ -295,7 +299,7 @@ DWORD WINAPI MAINDBExchangeWorker(LPVOID lpParam)
 		Sleep(1000);
 	}
 
-	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("exit..."));
+	//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("exit..."));
 
 	return ERROR_SUCCESS;
 }
