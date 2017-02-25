@@ -16,7 +16,7 @@ using namespace std;
 using namespace framework::Diagnostics;
 using namespace framework::Threading;
 
-#define  SERVICE_NAME  _T("sag.osiris.plc.exchange")
+//#define  SERVICE_NAME  _T("sag.osiris.plc.exchange")
 
 Configurator cnf;
 
@@ -117,13 +117,20 @@ int _tmain(int argc, TCHAR *argv[], TCHAR *env[])
 
 VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 {
+	CA2T buff(cnf.ServiceName().c_str());
+	LPCTSTR tamburine = buff;
+
+	CLogger<CNoLock> logger(cnf.LogLevel(), tamburine);
+
+	logger.AddOutputStream(new std::wofstream(cnf.LogFile()), true, cnf.LogLevel());
+
 	DWORD Status = E_FAIL;
 
-	g_StatusHandle = RegisterServiceCtrlHandler(SERVICE_NAME, ServiceCtrlHandler);
+	g_StatusHandle = RegisterServiceCtrlHandler(LPWSTR(cnf.ServiceName().c_str()), ServiceCtrlHandler);
 
 	if (g_StatusHandle == NULL)
 	{
-		//WRITELOG(logger, framework::Diagnostics::LogLevel::Error, _T("Server start error! Is will be stopped!"));
+		WRITELOG(logger, framework::Diagnostics::LogLevel::Error, _T("Server start error! Is will be stopped!"));
 		goto EXIT;
 	}
 
@@ -206,13 +213,20 @@ EXIT:
 
 VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
 {
+	CA2T buff(cnf.ServiceName().c_str());
+	LPCTSTR tamburine = buff;
+
+	CLogger<CNoLock> logger(cnf.LogLevel(), tamburine);
+
+	logger.AddOutputStream(new std::wofstream(cnf.LogFile()), true, cnf.LogLevel());
+
 	//OutputDebugString(_T("My Sample Service: ServiceCtrlHandler: Entry"));
 
 	switch (CtrlCode)
 	{
 	case SERVICE_CONTROL_STOP:
 
-		//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server stop request. Service will be stopped..."));
+		WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("Server stop request. Service will be stopped..."));
 
 		if (g_ServiceStatus.dwCurrentState != SERVICE_RUNNING)
 			break;
@@ -246,8 +260,14 @@ VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode)
 
 DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 {
+	CA2T buff(cnf.ServiceName().c_str());
+	LPCTSTR tamburine = buff;
 
-	//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("running..."));
+	CLogger<CNoLock> logger(cnf.LogLevel(), tamburine);
+
+	logger.AddOutputStream(new std::wofstream(cnf.LogFile()), true, cnf.LogLevel());
+
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("main worker is running..."));
 
 	// Start the thread that will perform the main task of the service
 	CreateThread(NULL, 0, MAINDBExchangeWorker, NULL, 0, NULL);
@@ -264,7 +284,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 		Sleep(550);
 	}
 
-	//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("exit..."));
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("main worker exit..."));
 
 	return ERROR_SUCCESS;
 }
@@ -272,8 +292,14 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 
 DWORD WINAPI PLCExchangeWorker(LPVOID lpParam)
 {
+	CA2T buff(cnf.ServiceName().c_str());
+	LPCTSTR tamburine = buff;
 
-	//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("running..."));
+	CLogger<CNoLock> logger(cnf.LogLevel(), tamburine);
+
+	logger.AddOutputStream(new std::wofstream(cnf.LogFile()), true, cnf.LogLevel());
+
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("PLC exchange worker is running..."));
 
 	while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
 	{
@@ -282,15 +308,21 @@ DWORD WINAPI PLCExchangeWorker(LPVOID lpParam)
 		Sleep(200);
 	}
 
-	//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("exit..."));
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("PLC exchange worker exit..."));
 
 	return ERROR_SUCCESS;
 }
 
 DWORD WINAPI MAINDBExchangeWorker(LPVOID lpParam)
 {
+	CA2T buff(cnf.ServiceName().c_str());
+	LPCTSTR tamburine = buff;
 
-	//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("running..."));
+	CLogger<CNoLock> logger(cnf.LogLevel(), tamburine);
+
+	logger.AddOutputStream(new std::wofstream(cnf.LogFile()), true, cnf.LogLevel());
+
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("MainDB worker is running..."));
 
 	while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0)
 	{
@@ -299,7 +331,7 @@ DWORD WINAPI MAINDBExchangeWorker(LPVOID lpParam)
 		Sleep(1000);
 	}
 
-	//WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("exit..."));
+	WRITELOG(logger, framework::Diagnostics::LogLevel::Info, _T("MainDB worker exit..."));
 
 	return ERROR_SUCCESS;
 }
